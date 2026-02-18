@@ -24,116 +24,125 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Ensure Gradle wrapper exists
+      - name: Fix gradlew (CRLF -> LF) and permissions
         run: |
-          if [ ! -f "./gradlew" ]; then
-            echo "No gradlew found, generating wrapper..."
-            gradle wrapper --gradle-version 8.2
+          sudo apt-get update
+          sudo apt-get install -y dos2unix
+          if [ -f "./gradlew" ]; then
+            dos2unix ./gradlew
+            chmod +x ./gradlew
           fi
-          chmod +x gradlew
+
+      - name: Ensure Gradle wrapper exists (generate if missing)
+        run: |
+          # If gradlew is missing or wrapper jar is missing, generate wrapper using system gradle
+          if [ ! -f "./gradlew" ] || [ ! -f "gradle/wrapper/gradle-wrapper.jar" ]; then
+            echo "Gradle wrapper missing/incomplete, generating..."
+            gradle wrapper --gradle-version 8.2
+            dos2unix ./gradlew
+            chmod +x ./gradlew
+          fi
 
       - name: Generate minimal Android app module if missing
         run: |
-          # If app module doesn't exist, create a minimal one
           if [ ! -d "app" ]; then
             echo "Creating minimal Android app module..."
             mkdir -p app/src/main/java/com/cleanvideo/app
-            mkdir -p app/src/main/res/layout
+            mkdir -p app/src/main/res/values
 
             cat > settings.gradle.kts <<'EOF'
-          rootProject.name = "CleanVideo"
-          include(":app")
-          EOF
+rootProject.name = "CleanVideo"
+include(":app")
+EOF
 
             cat > build.gradle.kts <<'EOF'
-          plugins {
-            // keep root empty; plugin applied in module
-          }
-          EOF
+plugins {
+  // empty root
+}
+EOF
 
             cat > gradle.properties <<'EOF'
-          org.gradle.jvmargs=-Xmx2g -Dfile.encoding=UTF-8
-          android.useAndroidX=true
-          android.enableJetifier=true
-          EOF
+org.gradle.jvmargs=-Xmx2g -Dfile.encoding=UTF-8
+android.useAndroidX=true
+android.enableJetifier=true
+EOF
 
             cat > app/build.gradle.kts <<'EOF'
-          plugins {
-            id("com.android.application")
-            id("org.jetbrains.kotlin.android")
-          }
+plugins {
+  id("com.android.application")
+  id("org.jetbrains.kotlin.android")
+}
 
-          android {
-            namespace = "com.cleanvideo.app"
-            compileSdk = 34
+android {
+  namespace = "com.cleanvideo.app"
+  compileSdk = 34
 
-            defaultConfig {
-              applicationId = "com.cleanvideo.app"
-              minSdk = 24
-              targetSdk = 34
-              versionCode = 1
-              versionName = "1.0"
-              testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-            }
+  defaultConfig {
+    applicationId = "com.cleanvideo.app"
+    minSdk = 24
+    targetSdk = 34
+    versionCode = 1
+    versionName = "1.0"
+    testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+  }
 
-            buildTypes {
-              release {
-                isMinifyEnabled = false
-                proguardFiles(
-                  getDefaultProguardFile("proguard-android-optimize.txt"),
-                  "proguard-rules.pro"
-                )
-              }
-            }
+  buildTypes {
+    release {
+      isMinifyEnabled = false
+      proguardFiles(
+        getDefaultProguardFile("proguard-android-optimize.txt"),
+        "proguard-rules.pro"
+      )
+    }
+  }
 
-            compileOptions {
-              sourceCompatibility = JavaVersion.VERSION_17
-              targetCompatibility = JavaVersion.VERSION_17
-            }
-            kotlinOptions {
-              jvmTarget = "17"
-            }
-          }
+  compileOptions {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+  }
+  kotlinOptions {
+    jvmTarget = "17"
+  }
+}
 
-          dependencies {
-            implementation("androidx.core:core-ktx:1.13.1")
-            implementation("androidx.appcompat:appcompat:1.7.0")
-            implementation("com.google.android.material:material:1.12.0")
-
-            testImplementation("junit:junit:4.13.2")
-          }
-          EOF
+dependencies {
+  implementation("androidx.core:core-ktx:1.13.1")
+  implementation("androidx.appcompat:appcompat:1.7.0")
+  implementation("com.google.android.material:material:1.12.0")
+  testImplementation("junit:junit:4.13.2")
+}
+EOF
 
             cat > app/src/main/AndroidManifest.xml <<'EOF'
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-              <application
-                  android:label="CleanVideo"
-                  android:allowBackup="true"
-                  android:supportsRtl="true"
-                  android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar">
-                  <activity android:name=".MainActivity">
-                      <intent-filter>
-                          <action android:name="android.intent.action.MAIN" />
-                          <category android:name="android.intent.category.LAUNCHER" />
-                      </intent-filter>
-                  </activity>
-              </application>
-          </manifest>
-          EOF
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <application
+    android:label="CleanVideo"
+    android:allowBackup="true"
+    android:supportsRtl="true"
+    android:theme="@style/Theme.AppCompat.Light.NoActionBar">
+    <activity android:name="com.cleanvideo.app.MainActivity" android:exported="true">
+      <intent-filter>
+        <action android:name="android.intent.action.MAIN" />
+        <category android:name="android.intent.category.LAUNCHER" />
+      </intent-filter>
+    </activity>
+  </application>
+</manifest>
+EOF
 
             cat > app/src/main/java/com/cleanvideo/app/MainActivity.kt <<'EOF'
-          package com.cleanvideo.app
+package com.cleanvideo.app
 
-          import android.os.Bundle
-          import androidx.appcompat.app.AppCompatActivity
+import android.os.Bundle
+import androidx.appcompat.app.AppCompatActivity
 
-          class MainActivity : AppCompatActivity() {
-              override fun onCreate(savedInstanceState: Bundle?) {
-                  super.onCreate(savedInstanceState)
-                  // Minimal activity; no UI
-              }
-          }
-          EOF
+class MainActivity : AppCompatActivity() {
+  override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
+    // Minimal activity; no UI
+  }
+}
+EOF
           fi
 
       - name: Build Debug APK
