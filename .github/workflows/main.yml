@@ -1,148 +1,80 @@
-name: Build CleanVideo APK
-
-on:
-  push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main ]
-  workflow_dispatch:
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "17"
-
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Fix gradlew (CRLF -> LF) and permissions
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y dos2unix
-          if [ -f "./gradlew" ]; then
-            dos2unix ./gradlew
-            chmod +x ./gradlew
-          fi
-
-      - name: Ensure Gradle wrapper exists (generate if missing)
-        run: |
-          if [ ! -f "./gradlew" ] || [ ! -f "gradle/wrapper/gradle-wrapper.jar" ]; then
-            echo "Gradle wrapper missing/incomplete, generating..."
-            gradle wrapper --gradle-version 8.2
-            dos2unix ./gradlew
-            chmod +x ./gradlew
-          fi
-
+- name: Generate minimal Android app module if missing
       - name: Generate minimal Android app module if missing
+        shell: bash
         run: |
           if [ ! -d "app" ]; then
             echo "Creating minimal Android app module..."
+
             mkdir -p app/src/main/java/com/cleanvideo/app
             mkdir -p app/src/main/res/values
 
-            cat > settings.gradle.kts <<'EOF'
-rootProject.name = "CleanVideo"
-include(":app")
-EOF
+            printf '%s\n' \
+              'rootProject.name = "CleanVideo"' \
+              'include(":app")' > settings.gradle.kts
 
-            cat > build.gradle.kts <<'EOF'
-plugins {
-  // empty root
-}
-EOF
+            printf '%s\n' \
+              'plugins { }' > build.gradle.kts
 
-            cat > gradle.properties <<'EOF'
-org.gradle.jvmargs=-Xmx2g -Dfile.encoding=UTF-8
-android.useAndroidX=true
-android.enableJetifier=true
-EOF
+            printf '%s\n' \
+              'org.gradle.jvmargs=-Xmx2g -Dfile.encoding=UTF-8' \
+              'android.useAndroidX=true' \
+              'android.enableJetifier=true' > gradle.properties
 
-            cat > app/build.gradle.kts <<'EOF'
-plugins {
-  id("com.android.application")
-  id("org.jetbrains.kotlin.android")
-}
+            printf '%s\n' \
+              'plugins {' \
+              '  id("com.android.application")' \
+              '  id("org.jetbrains.kotlin.android")' \
+              '}' \
+              '' \
+              'android {' \
+              '  namespace = "com.cleanvideo.app"' \
+              '  compileSdk = 34' \
+              '' \
+              '  defaultConfig {' \
+              '    applicationId = "com.cleanvideo.app"' \
+              '    minSdk = 24' \
+              '    targetSdk = 34' \
+              '    versionCode = 1' \
+              '    versionName = "1.0"' \
+              '  }' \
+              '' \
+              '  compileOptions {' \
+              '    sourceCompatibility = JavaVersion.VERSION_17' \
+              '    targetCompatibility = JavaVersion.VERSION_17' \
+              '  }' \
+              '  kotlinOptions { jvmTarget = "17" }' \
+              '}' \
+              '' \
+              'dependencies {' \
+              '  implementation("androidx.core:core-ktx:1.13.1")' \
+              '  implementation("androidx.appcompat:appcompat:1.7.0")' \
+              '  implementation("com.google.android.material:material:1.12.0")' \
+              '}' \
+              > app/build.gradle.kts
 
-android {
-  namespace = "com.cleanvideo.app"
-  compileSdk = 34
+            printf '%s\n' \
+              '<manifest xmlns:android="http://schemas.android.com/apk/res/android">' \
+              '  <application android:label="CleanVideo" android:theme="@style/Theme.AppCompat.Light.NoActionBar">' \
+              '    <activity android:name="com.cleanvideo.app.MainActivity" android:exported="true">' \
+              '      <intent-filter>' \
+              '        <action android:name="android.intent.action.MAIN" />' \
+              '        <category android:name="android.intent.category.LAUNCHER" />' \
+              '      </intent-filter>' \
+              '    </activity>' \
+              '  </application>' \
+              '</manifest>' \
+              > app/src/main/AndroidManifest.xml
 
-  defaultConfig {
-    applicationId = "com.cleanvideo.app"
-    minSdk = 24
-    targetSdk = 34
-    versionCode = 1
-    versionName = "1.0"
-  }
-
-  buildTypes {
-    release {
-      isMinifyEnabled = false
-    }
-  }
-
-  compileOptions {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
-  }
-  kotlinOptions {
-    jvmTarget = "17"
-  }
-}
-
-dependencies {
-  implementation("androidx.core:core-ktx:1.13.1")
-  implementation("androidx.appcompat:appcompat:1.7.0")
-  implementation("com.google.android.material:material:1.12.0")
-}
-EOF
-
-            cat > app/src/main/AndroidManifest.xml <<'EOF'
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
-  <application
-    android:label="CleanVideo"
-    android:allowBackup="true"
-    android:supportsRtl="true"
-    android:theme="@style/Theme.AppCompat.Light.NoActionBar">
-    <activity android:name="com.cleanvideo.app.MainActivity" android:exported="true">
-      <intent-filter>
-        <action android:name="android.intent.action.MAIN" />
-        <category android:name="android.intent.category.LAUNCHER" />
-      </intent-filter>
-    </activity>
-  </application>
-</manifest>
-EOF
-
-            cat > app/src/main/java/com/cleanvideo/app/MainActivity.kt <<'EOF'
-package com.cleanvideo.app
-
-import android.os.Bundle
-import androidx.appcompat.app.AppCompatActivity
-
-class MainActivity : AppCompatActivity() {
-  override fun onCreate(savedInstanceState: Bundle?) {
-    super.onCreate(savedInstanceState)
-  }
-}
-EOF
+            printf '%s\n' \
+              'package com.cleanvideo.app' \
+              '' \
+              'import android.os.Bundle' \
+              'import androidx.appcompat.app.AppCompatActivity' \
+              '' \
+              'class MainActivity : AppCompatActivity() {' \
+              '  override fun onCreate(savedInstanceState: Bundle?) {' \
+              '    super.onCreate(savedInstanceState)' \
+              '  }' \
+              '}' \
+              > app/src/main/java/com/cleanvideo/app/MainActivity.kt
           fi
-
-      - name: Build Debug APK
-        run: ./gradlew :app:assembleDebug --no-daemon
-
-      - name: Upload Debug APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: CleanVideo-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
-          retention-days: 30
