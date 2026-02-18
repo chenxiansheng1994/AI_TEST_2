@@ -35,7 +35,6 @@ jobs:
 
       - name: Ensure Gradle wrapper exists (generate if missing)
         run: |
-          # If gradlew is missing or wrapper jar is missing, generate wrapper using system gradle
           if [ ! -f "./gradlew" ] || [ ! -f "gradle/wrapper/gradle-wrapper.jar" ]; then
             echo "Gradle wrapper missing/incomplete, generating..."
             gradle wrapper --gradle-version 8.2
@@ -83,16 +82,11 @@ android {
     targetSdk = 34
     versionCode = 1
     versionName = "1.0"
-    testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
 
   buildTypes {
     release {
       isMinifyEnabled = false
-      proguardFiles(
-        getDefaultProguardFile("proguard-android-optimize.txt"),
-        "proguard-rules.pro"
-      )
     }
   }
 
@@ -109,7 +103,6 @@ dependencies {
   implementation("androidx.core:core-ktx:1.13.1")
   implementation("androidx.appcompat:appcompat:1.7.0")
   implementation("com.google.android.material:material:1.12.0")
-  testImplementation("junit:junit:4.13.2")
 }
 EOF
 
@@ -139,7 +132,6 @@ import androidx.appcompat.app.AppCompatActivity
 class MainActivity : AppCompatActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
-    // Minimal activity; no UI
   }
 }
 EOF
